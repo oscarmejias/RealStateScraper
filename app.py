@@ -2,6 +2,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from scraper import run_scraper
+import logging
+
+# Configurar logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Real Estate Scraper API")
 
@@ -28,9 +33,15 @@ class ScrapingRequest(BaseModel):
     construction_year_max: str | None = None
 
 
+@app.get("/")
+async def root():
+    return {"message": "Real Estate Scraper API is running"}
+
+
 @app.post("/scrape")
 async def scrape_properties(request: ScrapingRequest):
     try:
+        logger.info(f"Iniciando scraping para ubicación: {request.location}")
         results = await run_scraper(
             location=request.location,
             property_type=request.property_type,
@@ -52,6 +63,10 @@ async def scrape_properties(request: ScrapingRequest):
             construction_year_min=request.construction_year_min,
             construction_year_max=request.construction_year_max,
         )
+        logger.info(
+            f"Scraping completado exitosamente. Se encontraron {len(results)} propiedades"
+        )
         return {"status": "success", "data": results}
     except Exception as e:
+        logger.error(f"Error durante el scraping: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
