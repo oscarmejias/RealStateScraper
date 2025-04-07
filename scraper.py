@@ -1,9 +1,13 @@
 import os
 from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, expect
 import asyncio
 from typing import Optional, List, Dict, Any
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -29,7 +33,7 @@ class FilterManager:
             filter_button = self.page.locator(
                 "[data-test-id='search-components_filter-bar_advanced-filters-button']"
             )
-            await filter_button.wait_for(state="visible", timeout=5000)
+            await filter_button.wait_for(state="visible")
             await filter_button.click()
         except:
             try:
@@ -37,14 +41,14 @@ class FilterManager:
                 filter_button = self.page.locator(
                     "button span:has-text('Filtros')"
                 ).first
-                await filter_button.wait_for(state="visible", timeout=5000)
+                await filter_button.wait_for(state="visible")
                 await filter_button.click()
             except:
                 # Intento 3: Por el botón que contiene el SVG y el texto
                 filter_button = self.page.locator(
                     "button:has(svg):has-text('Filtros')"
                 ).first
-                await filter_button.wait_for(state="visible", timeout=5000)
+                await filter_button.wait_for(state="visible")
                 await filter_button.click()
         await self.page.wait_for_load_state("networkidle")
 
@@ -94,7 +98,7 @@ class FilterManager:
             type_dropdown = self.page.locator(
                 "[data-test-id='search-components_advanced-filters_property-type-filter_button']"
             )
-            await type_dropdown.wait_for(state="visible", timeout=5000)
+            await type_dropdown.wait_for(state="visible")
             await type_dropdown.click()
 
             # Select specific option
@@ -107,7 +111,7 @@ class FilterManager:
             subtype_dropdown = self.page.locator(
                 "[data-test-id='search-components_advanced-filters_property-sub-type-filter_button']"
             )
-            await subtype_dropdown.wait_for(state="visible", timeout=5000)
+            await subtype_dropdown.wait_for(state="visible")
             await subtype_dropdown.click()
 
             await self.page.keyboard.type(property_subtype)
@@ -283,15 +287,20 @@ async def run_scraper(
         page = await browser.new_page()
 
         try:
+            logger.info("Starting scraper")
             await page.goto(INITIAL_URL)
+
+            logger.info(f"Entered {INITIAL_URL}")
 
             # Botón de aceptar cookies
             try:
                 cookie_button = page.locator("button", has_text="De acuerdo")
                 if await cookie_button.is_visible():
                     await cookie_button.click()
+                    logger.debug("Coockie button clicked")
             except:
                 print("El banner de cookies no apareció en este entorno")
+                logger.error("Cookie banner not found")
 
             await page.wait_for_load_state("networkidle")
 
@@ -339,13 +348,22 @@ async def run_scraper(
             await page.wait_for_load_state("networkidle")
             await page.wait_for_timeout(2000)
 
-            # Obtener todas las cards de propiedades
-            property_cards = page.locator(
-                "article[data-test-id^='search-components_result-card_']"
-            )
+            # Obtener numero de propiedades encontradas
+
+            try:
+                property_cards = page.locator(".sc-e5f1eba3-3.cGSWBa article")
+
+                # Verificar si encontramos artículos
+                count = await property_cards.count()
+                logger.info(f"Número de artículos encontrados: {count}")
+            except Exception as e:
+                logger.error(f"Error al buscar artículos: {str(e)}")
+
+            # Esperar a que exista al menos un artículo
+            await expect(property_cards).not_to_have_count(0)
 
             # Esperar a que al menos una card esté visible
-            await property_cards.first.wait_for(state="visible", timeout=10000)
+            await property_cards.first.wait_for(state="visible")
 
             # Obtener el número total de cards
             count = await property_cards.count()
@@ -355,9 +373,21 @@ async def run_scraper(
             for i in range(count):
                 card = property_cards.nth(i)
 
+                # Verificar si el artículo tiene información útil
                 try:
+                    # Esperar a que el artículo tenga contenido relevante
+                    await expect(card).not_to_have_class("sc-e5f1eba3-11 cBTUg")
+
+                    # Tomar un pantallazo de la propiedad actual
+                    await card.screenshot(path=f"property_screenshot_{i}.png")
+
+                    await card.wait_for(state="visible")
+                    logger.info(f"Card {i + 1}: {await card.is_visible()}")
+
                     # Verificar primero si el artículo tiene la información necesaria
-                    price_element = card.locator("[data-test-id$='_price']")
+                    price_element = card.locator(
+                        "[data-test-id$='search-components_result-card_price']"
+                    )
                     if not await price_element.is_visible():
                         continue
 
@@ -400,9 +430,11 @@ async def run_scraper(
                             print(f"No se pudo obtener el enlace: {str(e)}")
 
                         results.append(property_data)
-
                 except Exception as e:
-                    print(f"Error al procesar la card {i + 1}: {str(e)}")
+                    logger.info(
+                        f"Saltando artículo {i + 1} por falta de información útil"
+                    )
+                    continue
 
         finally:
             await browser.close()
