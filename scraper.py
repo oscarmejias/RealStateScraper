@@ -294,13 +294,13 @@ async def run_scraper(
 
             # Botón de aceptar cookies
             try:
-                cookie_button = page.locator("button", has_text="De acuerdo")
+                cookie_button = page.locator("[id='didomi-notice-agree-button]")
                 if await cookie_button.is_visible():
                     await cookie_button.click()
                     logger.debug("Coockie button clicked")
             except:
                 print("El banner de cookies no apareció en este entorno")
-                logger.error("Cookie banner not found")
+                logger.info("Cookie banner not found")
 
             await page.wait_for_load_state("networkidle")
 
