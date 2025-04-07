@@ -5,8 +5,12 @@ from playwright.async_api import async_playwright, expect
 import asyncio
 from typing import Optional, List, Dict, Any
 import logging
+from datetime import datetime
 
-logging.basicConfig(level=logging.INFO)
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -19,6 +23,10 @@ INITIAL_URL = "https://www.engelvoelkers.com/co/es"
 
 # Variable para la location de búsqueda
 location = "Bogota, Colombia"
+
+# Crear directorio para screenshots si no existe
+SCREENSHOT_DIR = "screenshots"
+os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 
 # Clase para manejar los filtros de propiedades
@@ -281,10 +289,17 @@ async def run_scraper(
     construction_year_max: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     results = []
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     async with async_playwright() as playwright:
-        browser = await playwright.chromium.launch(headless=True)
-        page = await browser.new_page()
+        browser = await playwright.chromium.launch(
+            headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"]
+        )
+        context = await browser.new_context(
+            viewport={"width": 1920, "height": 1080},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        )
+        page = await context.new_page()
 
         try:
             logger.info("Starting scraper")
@@ -294,31 +309,42 @@ async def run_scraper(
 
             # Botón de aceptar cookies
             try:
-                cookie_button = page.locator("[id='didomi-notice-agree-button]")
-                if await cookie_button.is_visible():
+                # Esperar específicamente por el popup de Didomi
+                cookie_popup = page.locator("#didomi-popup")
+                if await cookie_popup.is_visible():
+                    cookie_button = page.locator("#didomi-notice-agree-button")
+                    await cookie_button.wait_for(state="visible")
                     await cookie_button.click()
-                    logger.debug("Coockie button clicked")
-            except:
-                print("El banner de cookies no apareció en este entorno")
-                logger.info("Cookie banner not found")
+                    logger.info("Cookie banner aceptado")
+                    # Esperar a que el popup desaparezca completamente
+                    await cookie_popup.wait_for(state="hidden")
+                    await page.wait_for_load_state("networkidle")
+            except Exception as e:
+                logger.info(f"No se encontró el banner de cookies: {str(e)}")
 
             await page.wait_for_load_state("networkidle")
 
             # Buscar el campo de búsqueda
             search_input = page.locator(".sc-7856fc0a-2.foWFcA")
+            await search_input.wait_for(state="visible")
             await search_input.fill(location)
+            logger.info("Campo de búsqueda completado")
             await page.wait_for_timeout(2000)
 
-            search_button = page.locator(
-                "button[class='sc-a6c22956-0 fMdhBy sc-7856fc0a-4 kUdQjI']"
-            )
+            # Asegurarse de que el botón de búsqueda esté visible y clickeable
+            search_button = page.locator(".sc-a6c22956-0.fMdhBy.sc-7856fc0a-4.kUdQjI")
+            await search_button.wait_for(state="visible")
+            await expect(search_button).to_be_enabled()
             await search_button.click()
+            logger.info("Botón de búsqueda clickeado")
 
+            # Esperar a que la navegación se complete
             await page.wait_for_load_state("networkidle")
             await page.wait_for_timeout(3000)
 
             # Crear una instancia del FilterManager
             filter_manager = FilterManager(page)
+            logger.info("filter manager instanciated")
 
             # Aplicar filtros personalizados
             await filter_manager.apply_filters(
@@ -341,13 +367,14 @@ async def run_scraper(
                 construction_year_min=construction_year_min,
                 construction_year_max=construction_year_max,
             )
+            logger.info("filters applied")
 
             # Esperar a que la página cargue completamente
             await page.wait_for_load_state("networkidle")
             await page.wait_for_timeout(2000)
 
             # Obtener numero de propiedades encontradas
-
+            logger.info("waiting for properties to load")
             try:
                 property_cards = page.locator(".sc-e5f1eba3-3.cGSWBa article")
 
@@ -425,13 +452,25 @@ async def run_scraper(
                             print(f"No se pudo obtener el enlace: {str(e)}")
 
                         results.append(property_data)
+
+                    # Modificar la ruta de los screenshots
+                    await card.screenshot(
+                        path=f"{SCREENSHOT_DIR}/property_{timestamp}_{i}.png"
+                    )
+
                 except Exception as e:
                     logger.info(
                         f"Saltando artículo {i + 1} por falta de información útil"
                     )
                     continue
 
+        except Exception as e:
+            logger.error(f"Error durante el scraping: {str(e)}")
+            # Tomar screenshot del error
+            await page.screenshot(path=f"{SCREENSHOT_DIR}/error_{timestamp}.png")
+            raise
         finally:
+            await context.close()
             await browser.close()
 
     return results
