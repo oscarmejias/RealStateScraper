@@ -1,10 +1,5 @@
 FROM mcr.microsoft.com/playwright/python:v1.41.0-jammy
 
-# Crear un usuario no root
-RUN useradd -m -u 1000 pwuser && \
-    mkdir -p /home/pwuser/app && \
-    chown -R pwuser:pwuser /home/pwuser
-
 WORKDIR /home/pwuser/app
 
 # Copiar los archivos del proyecto
