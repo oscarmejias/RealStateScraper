@@ -305,9 +305,7 @@ async def run_scraper(
             await page.wait_for_load_state("networkidle")
 
             # Buscar el campo de búsqueda
-            search_input = page.get_by_placeholder(
-                "Ciudad, distrito, código postal o ID de E&V"
-            )
+            search_input = page.locator(".sc-7856fc0a-2.foWFcA")
             await search_input.fill(location)
             await page.wait_for_timeout(2000)
 
@@ -377,9 +375,6 @@ async def run_scraper(
                 try:
                     # Esperar a que el artículo tenga contenido relevante
                     await expect(card).not_to_have_class("sc-e5f1eba3-11 cBTUg")
-
-                    # Tomar un pantallazo de la propiedad actual
-                    await card.screenshot(path=f"property_screenshot_{i}.png")
 
                     await card.wait_for(state="visible")
                     logger.info(f"Card {i + 1}: {await card.is_visible()}")
