@@ -6,6 +6,7 @@ import asyncio
 from typing import Optional, List, Dict, Any
 import logging
 from datetime import datetime
+import random
 
 # Configurar logging
 logging.basicConfig(
@@ -37,27 +38,59 @@ class FilterManager:
     async def open_filters(self):
         """Abre la sección de filtros si no está abierta"""
         try:
+            # Simular movimiento del mouse aleatorio antes de buscar filtros
+            await self.page.mouse.move(
+                random.randint(100, 500), random.randint(100, 500)
+            )
+            await self.page.wait_for_timeout(random.randint(1000, 2000))
+
             # Intento 1: Por el data-test-id específico
             filter_button = self.page.locator(
                 "[data-test-id='search-components_filter-bar_advanced-filters-button']"
             )
             await filter_button.wait_for(state="visible")
+            await filter_button.hover()
+            await self.page.wait_for_timeout(random.randint(500, 1000))
             await filter_button.click()
+            logger.info("Filters opened")
         except:
+            logger.info("Filters not found, trying to find them in different ways")
             try:
+                # Simular movimiento del mouse aleatorio antes del segundo intento
+                await self.page.mouse.move(
+                    random.randint(100, 500), random.randint(100, 500)
+                )
+                await self.page.wait_for_timeout(random.randint(1000, 2000))
+
                 # Intento 2: Por el span dentro del botón
                 filter_button = self.page.locator(
                     "button span:has-text('Filtros')"
                 ).first
                 await filter_button.wait_for(state="visible")
+                await filter_button.hover()
+                await self.page.wait_for_timeout(random.randint(500, 1000))
                 await filter_button.click()
+                logger.info("Filters opened")
             except:
+                logger.info("Filters not found, trying to find them in different ways")
+                # Simular movimiento del mouse aleatorio antes del tercer intento
+                await self.page.mouse.move(
+                    random.randint(100, 500), random.randint(100, 500)
+                )
+                await self.page.wait_for_timeout(random.randint(1000, 2000))
+
                 # Intento 3: Por el botón que contiene el SVG y el texto
                 filter_button = self.page.locator(
                     "button:has(svg):has-text('Filtros')"
                 ).first
                 await filter_button.wait_for(state="visible")
+                await filter_button.hover()
+                await self.page.wait_for_timeout(random.randint(500, 1000))
                 await filter_button.click()
+                logger.info("Filters opened")
+
+        # Esperar a que la página se estabilice después de abrir filtros
+        await self.page.wait_for_timeout(random.randint(2000, 3000))
         await self.page.wait_for_load_state("networkidle")
 
     async def apply_filters(
@@ -98,167 +131,150 @@ class FilterManager:
             construction_year_min/max: Construction year range
 
         """
-        # Abrir sección de filtros
+        # Abrir sección de filtros con comportamiento humano
         await self.open_filters()
 
-        # Apply property type
-        if property_type:
-            type_dropdown = self.page.locator(
-                "[data-test-id='search-components_advanced-filters_property-type-filter_button']"
-            )
-            await type_dropdown.wait_for(state="visible")
-            await type_dropdown.click()
+        # Simular scroll aleatorio dentro del panel de filtros
+        await self.page.mouse.wheel(0, random.randint(100, 300))
+        await self.page.wait_for_timeout(random.randint(500, 1500))
 
-            # Select specific option
-            await self.page.keyboard.type(property_type)
-            await self.page.keyboard.press("Enter")
-            await self.page.wait_for_timeout(500)
+        # Aplicar cada filtro con comportamiento humano
+        for key, value in {
+            "property_type": property_type,
+            "property_subtype": property_subtype,
+            "price_min": price_min,
+            "price_max": price_max,
+            "living_surface_min": living_surface_min,
+            "living_surface_max": living_surface_max,
+            "plot_surface_min": plot_surface_min,
+            "plot_surface_max": plot_surface_max,
+            "total_surface_min": total_surface_min,
+            "total_surface_max": total_surface_max,
+            "rooms_min": rooms_min,
+            "rooms_max": rooms_max,
+            "bedrooms_min": bedrooms_min,
+            "bedrooms_max": bedrooms_max,
+            "bathrooms_min": bathrooms_min,
+            "bathrooms_max": bathrooms_max,
+            "construction_year_min": construction_year_min,
+            "construction_year_max": construction_year_max,
+        }.items():
+            if value is not None:
+                try:
+                    # Simular movimiento del mouse antes de cada filtro
 
-        # Apply property subtype
-        if property_subtype:
-            subtype_dropdown = self.page.locator(
-                "[data-test-id='search-components_advanced-filters_property-sub-type-filter_button']"
-            )
-            await subtype_dropdown.wait_for(state="visible")
-            await subtype_dropdown.click()
+                    await self.page.wait_for_timeout(200)
 
-            await self.page.keyboard.type(property_subtype)
-            await self.page.keyboard.press("Enter")
-            await self.page.wait_for_timeout(500)
+                    if key == "property_type":
+                        dropdown = self.page.locator(
+                            "[data-test-id='search-components_advanced-filters_property-type-filter_button']"
+                        )
+                        await dropdown.wait_for(state="visible")
+                        await dropdown.hover()
+                        await self.page.wait_for_timeout(200)
+                        await dropdown.click()
 
-        # Apply price range
-        if price_min or price_max:
-            if price_min:
-                price_min_field = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_price-filter_input-min']"
-                )
-                await price_min_field.fill(str(price_min))
-                await self.page.wait_for_timeout(300)
+                        # Escribir el valor letra por letra
+                        for char in value:
+                            await self.page.keyboard.type(
+                                char, delay=random.randint(50, 150)
+                            )
+                        await self.page.wait_for_timeout(200)
+                        await self.page.keyboard.press("Enter")
+                        await self.page.wait_for_timeout(random.randint(500, 1000))
 
-            if price_max:
-                price_max_field = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_price-filter_input-max']"
-                )
-                await price_max_field.fill(str(price_max))
-                await self.page.wait_for_timeout(300)
+                    elif key == "property_subtype":
+                        dropdown = self.page.locator(
+                            "[data-test-id='search-components_advanced-filters_property-sub-type-filter_button']"
+                        )
+                        await dropdown.wait_for(state="visible")
+                        await dropdown.hover()
+                        await self.page.wait_for_timeout(200)
+                        await dropdown.click()
 
-        # Apply living surface
-        if living_surface_min or living_surface_max:
-            if living_surface_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_living-surface-filter_input-min']"
-                )
-                await min_input.fill(str(living_surface_min))
-                await self.page.wait_for_timeout(300)
+                        # Escribir el valor letra por letra
+                        for char in value:
+                            await self.page.keyboard.type(
+                                char, delay=random.randint(50, 150)
+                            )
+                        await self.page.wait_for_timeout(200)
+                        await self.page.keyboard.press("Enter")
+                        await self.page.wait_for_timeout(random.randint(500, 1000))
 
-            if living_surface_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_living-surface-filter_input-max']"
-                )
-                await max_input.fill(str(living_surface_max))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["price_min", "price_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_price-filter_input-{'min' if key == 'price_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-        # Apply plot surface
-        if plot_surface_min or plot_surface_max:
-            if plot_surface_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_plot-surface-filter_input-min']"
-                )
-                await min_input.fill(str(plot_surface_min))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["living_surface_min", "living_surface_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_living-surface-filter_input-{'min' if key == 'living_surface_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-            if plot_surface_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_plot-surface-filter_input-max']"
-                )
-                await max_input.fill(str(plot_surface_max))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["plot_surface_min", "plot_surface_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_plot-surface-filter_input-{'min' if key == 'plot_surface_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-        # Apply total surface
-        if total_surface_min or total_surface_max:
-            if total_surface_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_total-surface-filter_input-min']"
-                )
-                await min_input.fill(str(total_surface_min))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["total_surface_min", "total_surface_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_total-surface-filter_input-{'min' if key == 'total_surface_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-            if total_surface_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_total-surface-filter_input-max']"
-                )
-                await max_input.fill(str(total_surface_max))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["rooms_min", "rooms_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_rooms-filter_input-{'min' if key == 'rooms_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-        # Apply rooms
-        if rooms_min or rooms_max:
-            if rooms_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_rooms-filter_input-min']"
-                )
-                await min_input.fill(str(rooms_min))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["bedrooms_min", "bedrooms_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_bedrooms-filter_input-{'min' if key == 'bedrooms_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-            if rooms_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_rooms-filter_input-max']"
-                )
-                await max_input.fill(str(rooms_max))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["bathrooms_min", "bathrooms_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_bathrooms-filter_input-{'min' if key == 'bathrooms_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-        # Apply bedrooms
-        if bedrooms_min or bedrooms_max:
-            if bedrooms_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_bedrooms-filter_input-min']"
-                )
-                await min_input.fill(str(bedrooms_min))
-                await self.page.wait_for_timeout(300)
+                    elif key in ["construction_year_min", "construction_year_max"]:
+                        field = self.page.locator(
+                            f"[data-test-id='search-components_advanced-filters_construction-year-filter_input-{'min' if key == 'construction_year_min' else 'max'}']"
+                        )
+                        await field.fill(str(value))
+                        await self.page.wait_for_timeout(200)
 
-            if bedrooms_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_bedrooms-filter_input-max']"
-                )
-                await max_input.fill(str(bedrooms_max))
-                await self.page.wait_for_timeout(300)
+                except Exception as e:
+                    logger.warning(f"Error al aplicar filtro {key}: {str(e)}")
+                    continue
 
-        # Apply bathrooms
-        if bathrooms_min or bathrooms_max:
-            if bathrooms_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_bathrooms-filter_input-min']"
-                )
-                await min_input.fill(str(bathrooms_min))
-                await self.page.wait_for_timeout(300)
-
-            if bathrooms_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_bathrooms-filter_input-max']"
-                )
-                await max_input.fill(str(bathrooms_max))
-                await self.page.wait_for_timeout(300)
-
-        # Apply construction year
-        if construction_year_min or construction_year_max:
-            if construction_year_min:
-                min_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_construction-year-filter_input-min']"
-                )
-                await min_input.fill(str(construction_year_min))
-                await self.page.wait_for_timeout(300)
-
-            if construction_year_max:
-                max_input = self.page.locator(
-                    "[data-test-id='search-components_advanced-filters_construction-year-filter_input-max']"
-                )
-                await max_input.fill(str(construction_year_max))
-                await self.page.wait_for_timeout(300)
+        # Simular comportamiento humano antes de hacer clic en "Done"
+        await self.page.mouse.move(random.randint(100, 500), random.randint(100, 500))
+        await self.page.wait_for_timeout(random.randint(1000, 2000))
 
         # Click "Done" button to apply filters
         done_button = self.page.locator(
             "[data-test-id='search-components_advanced-filters_submit-button']"
         )
+        await done_button.hover()
+        await self.page.wait_for_timeout(random.randint(500, 1000))
         await done_button.click()
+
+        # Esperar a que los filtros se apliquen
+        await self.page.wait_for_timeout(random.randint(2000, 4000))
         await self.page.wait_for_load_state("networkidle")
 
 
@@ -292,97 +308,119 @@ async def run_scraper(
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     async with async_playwright() as playwright:
+        # Configuración optimizada del navegador con evasión de detección
         browser = await playwright.chromium.launch(
-            headless=True,
+            headless=False,  # Mantener visible para debugging
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
                 "--disable-dev-shm-usage",
-                "--disable-gpu",
-                "--disable-software-rasterizer",
-                "--disable-accelerated-2d-canvas",
-                "--no-first-run",
-                "--no-zygote",
-                "--single-process",
-                "--disable-extensions",
-                "--mute-audio",
-                "--disable-background-networking",
-                "--disable-default-apps",
-                "--disable-sync",
-                "--disable-translate",
-                "--hide-scrollbars",
-                "--metrics-recording-only",
-                "--no-default-browser-check",
-                "--no-experiments",
-                "--disable-features=site-per-process",
-                "--ignore-gpu-blocklist",
-                "--memory-pressure-off",
-                f"--js-flags=--max-old-space-size={int(512 * 0.6)}",  # 60% del RAM disponible
+                "--disable-blink-features=AutomationControlled",  # Ocultar webdriver
+                "--disable-infobars",
+                "--window-size=920,480",
+                "--start-maximized",
             ],
         )
+
+        # Configuración del contexto con evasión de detección
         context = await browser.new_context(
-            viewport={"width": 800, "height": 600},  # Reducido para usar menos memoria
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            viewport={"width": 920, "height": 480},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             java_script_enabled=True,
-            bypass_csp=True,
             ignore_https_errors=True,
-            service_workers="block",  # Bloquear service workers para ahorrar memoria
+            bypass_csp=True,
+            permissions=["geolocation"],
+            geolocation={
+                "latitude": 4.6097,
+                "longitude": -74.0817,
+            },  # Coordenadas de Bogotá
+            locale="es-CO",
         )
 
-        # Reducir el uso de memoria deshabilitando características
-        await context.route(
-            "**/*.{png,jpg,jpeg,gif,svg,ico,mp4,webm}", lambda route: route.abort()
-        )
-        await context.route(
-            "**/*.{woff,woff2,ttf,otf,eot}", lambda route: route.abort()
-        )
+        # Configurar timeouts más largos para simular comportamiento humano
+        context.set_default_timeout(60000)
+        context.set_default_navigation_timeout(60000)
 
         page = await context.new_page()
 
+        # Inyectar scripts para evadir detección
+        await page.add_init_script(
+            """
+            Object.defineProperty(navigator, 'webdriver', {
+                get: () => undefined
+            });
+            Object.defineProperty(navigator, 'plugins', {
+                get: () => [1, 2, 3, 4, 5]
+            });
+            window.chrome = {
+                runtime: {}
+            };
+        """
+        )
+
         try:
             logger.info("Starting scraper")
-            await page.goto(
-                INITIAL_URL, wait_until="domcontentloaded"
-            )  # Cambiado de networkidle a domcontentloaded
+            await page.goto(INITIAL_URL, wait_until="domcontentloaded")
+
+            # Simular movimientos aleatorios del mouse
+            await page.mouse.move(random.randint(100, 500), random.randint(100, 500))
+            await page.wait_for_timeout(random.randint(1000, 2000))
 
             logger.info(f"Entered {INITIAL_URL}")
 
-            # Botón de aceptar cookies
+            # Manejar cookies con retraso aleatorio
             try:
                 cookie_popup = page.locator("#didomi-popup")
                 if await cookie_popup.is_visible():
+                    await page.wait_for_timeout(random.randint(1000, 2000))
                     cookie_button = page.locator("#didomi-notice-agree-button")
-                    await cookie_button.wait_for(state="visible")
+                    await cookie_button.hover()
+                    await page.wait_for_timeout(random.randint(500, 1000))
                     await cookie_button.click()
                     logger.info("Cookie banner aceptado")
                     await cookie_popup.wait_for(state="hidden")
-                    await page.wait_for_load_state("networkidle")
             except Exception as e:
                 logger.info(f"No se encontró el banner de cookies: {str(e)}")
 
-            await page.wait_for_load_state("networkidle", timeout=30000)
-
-            # Buscar el campo de búsqueda
+            # Buscar y llenar el campo de búsqueda con retrasos
             search_input = page.locator(".sc-7856fc0a-2.foWFcA")
-            await search_input.wait_for(state="visible", timeout=30000)
-            await search_input.fill(location)
-            logger.info("Campo de búsqueda completado")
-            await page.wait_for_timeout(2000)
+            await search_input.wait_for(state="visible")
+            await search_input.hover()
+            await page.wait_for_timeout(random.randint(500, 1000))
 
-            # Asegurarse de que el botón de búsqueda esté visible y clickeable
+            # Escribir la ubicación letra por letra
+            for char in location:
+                await search_input.type(char, delay=random.randint(100, 300))
+                await page.wait_for_timeout(random.randint(50, 150))
+
+            logger.info("Campo de búsqueda completado")
+
+            # Simular comportamiento humano antes de hacer clic
             search_button = page.locator(".sc-a6c22956-0.fMdhBy.sc-7856fc0a-4.kUdQjI")
-            await search_button.wait_for(state="visible", timeout=30000)
-            await expect(search_button).to_be_enabled()
-            await search_button.click()
+            await search_button.wait_for(state="visible")
+            await search_button.hover()
+            await page.wait_for_timeout(random.randint(500, 1000))
+
+            # Hacer clic y esperar a que la navegación se complete
+            async with page.expect_navigation(wait_until="domcontentloaded"):
+                await search_button.click()
             logger.info("Botón de búsqueda clickeado")
 
-            # Esperar a que la navegación se complete
-            await page.wait_for_load_state("networkidle", timeout=30000)
-            await page.wait_for_timeout(3000)
+            # Esperar a que la página se estabilice con tiempo aleatorio
+            await page.wait_for_timeout(random.randint(2000, 4000))
+            await page.wait_for_load_state("networkidle", timeout=60000)
+
+            # Simular scroll aleatorio
+            for _ in range(3):
+                await page.mouse.wheel(0, random.randint(100, 300))
+                await page.wait_for_timeout(random.randint(500, 1500))
 
             # Crear una instancia del FilterManager
             filter_manager = FilterManager(page)
             logger.info("filter manager instanciated")
+
+            # Esperar antes de aplicar filtros
+            await page.wait_for_timeout(random.randint(2000, 4000))
 
             # Aplicar filtros personalizados
             await filter_manager.apply_filters(
@@ -409,100 +447,110 @@ async def run_scraper(
 
             # Esperar a que la página cargue completamente
             await page.wait_for_load_state("networkidle", timeout=30000)
-            await page.wait_for_timeout(2000)
 
             # Obtener numero de propiedades encontradas
             logger.info("waiting for properties to load")
             try:
-                property_cards = page.locator(".sc-e5f1eba3-3.cGSWBa article")
+                # Esperar al contenedor principal de propiedades
+                property_container = page.locator(".sc-e5f1eba3-3.cGSWBa")
+                await property_container.wait_for(state="visible")
+
+                # Usar un selector más específico para las cards
+                property_cards = property_container.locator("article")
 
                 # Verificar si encontramos artículos
                 count = await property_cards.count()
                 logger.info(f"Número de artículos encontrados: {count}")
-            except Exception as e:
-                logger.error(f"Error al buscar artículos: {str(e)}")
 
-            # Esperar a que exista al menos un artículo
-            await expect(property_cards).not_to_have_count(0, timeout=30000)
+                if count == 0:
+                    logger.warning("No se encontraron propiedades")
+                    return results
 
-            # Esperar a que al menos una card esté visible
-            await property_cards.first.wait_for(state="visible", timeout=30000)
+                # Procesar las propiedades
+                for i in range(count):
+                    try:
+                        card = property_cards.nth(i)
 
-            # Obtener el número total de cards
-            count = await property_cards.count()
-            print(f"\nSe encontraron {count} propiedades")
+                        # Verificar si es una propiedad que nos interesa
+                        price_element = card.locator(
+                            "[data-test-id$='search-components_result-card_price']"
+                        )
+                        if not await price_element.is_visible():
+                            logger.info(
+                                f"Propiedad {i+1} no tiene precio visible, saltando..."
+                            )
+                            continue
 
-            # Iterar sobre cada card
-            for i in range(count):
-                card = property_cards.nth(i)
+                        # Extraer datos básicos
+                        property_data = {}
 
-                # Verificar si el artículo tiene información útil
-                try:
-                    # Esperar a que el artículo tenga contenido relevante
-                    await expect(card).not_to_have_class(
-                        "sc-e5f1eba3-11 cBTUg", timeout=30000
-                    )
+                        # Extraer precio
+                        property_data["price"] = await price_element.inner_text()
 
-                    await card.wait_for(state="visible", timeout=30000)
-                    logger.info(f"Card {i + 1}: {await card.is_visible()}")
+                        # Extraer ubicación si existe
+                        location_element = card.locator("[data-test-id$='_location']")
+                        if await location_element.is_visible():
+                            property_data["location"] = (
+                                await location_element.inner_text()
+                            )
 
-                    # Verificar primero si el artículo tiene la información necesaria
-                    price_element = card.locator(
-                        "[data-test-id$='search-components_result-card_price']"
-                    )
-                    if not await price_element.is_visible():
-                        continue
+                        # Extraer título si existe
+                        headline_element = card.locator("[data-test-id$='_headline']")
+                        if await headline_element.is_visible():
+                            property_data["headline"] = (
+                                await headline_element.inner_text()
+                            )
 
-                    price = await price_element.inner_text()
-                    location = await card.locator(
-                        "[data-test-id$='_location']"
-                    ).inner_text()
-                    bedrooms = await card.locator(
-                        "[data-test-id$='-bedrooms']"
-                    ).inner_text()
-                    bathrooms = await card.locator(
-                        "[data-test-id$='-bathrooms']"
-                    ).inner_text()
-                    headline = await card.locator(
-                        "[data-test-id$='_headline']"
-                    ).inner_text()
+                        # Solo agregar estos campos si existen
+                        bedrooms_element = card.locator("[data-test-id$='-bedrooms']")
+                        if await bedrooms_element.is_visible():
+                            property_data["bedrooms"] = (
+                                await bedrooms_element.inner_text()
+                            )
 
-                    # Solo procesar si tenemos al menos algunos datos
-                    if any([price.strip(), location.strip(), headline.strip()]):
+                        bathrooms_element = card.locator("[data-test-id$='-bathrooms']")
+                        if await bathrooms_element.is_visible():
+                            property_data["bathrooms"] = (
+                                await bathrooms_element.inner_text()
+                            )
+
+                        # Intentar obtener la URL si existe
+                        link_element = card.locator("a").first
+                        if await link_element.is_visible():
+                            property_data["url"] = await link_element.get_attribute(
+                                "href"
+                            )
+
+                        # Limpiar datos
                         property_data = {
-                            "location": location,
-                            "headline": headline,
-                            "price": price,
-                            "bedrooms": bedrooms,
-                            "bathrooms": bathrooms,
+                            k: v.strip() if isinstance(v, str) else v
+                            for k, v in property_data.items()
+                            if v
                         }
 
-                        try:
-                            # Intentar obtener el enlace usando el data-test-id del artículo
-                            article_id = await card.get_attribute("data-test-id")
-                            if article_id:
-                                link_element = card.locator(
-                                    f"[data-test-id='{article_id}'] a"
-                                ).first
-                                if await link_element.is_visible():
-                                    link = await link_element.get_attribute("href")
-                                    if link:
-                                        property_data["url"] = link
-                        except Exception as e:
-                            print(f"No se pudo obtener el enlace: {str(e)}")
+                        # Validar datos mínimos (precio y al menos ubicación o título)
+                        if property_data.get("price") and (
+                            property_data.get("location")
+                            or property_data.get("headline")
+                        ):
+                            results.append(property_data)
+                            logger.info(f"Propiedad {i+1} procesada exitosamente")
+                        else:
+                            logger.info(
+                                f"Propiedad {i+1} no cumple con los datos mínimos requeridos"
+                            )
 
-                        results.append(property_data)
+                    except Exception as e:
+                        logger.error(f"Error procesando propiedad {i+1}: {str(e)}")
+                        continue
 
-                    # Modificar la ruta de los screenshots
-                    await card.screenshot(
-                        path=f"{SCREENSHOT_DIR}/property_{timestamp}_{i}.png"
-                    )
+                    # Pequeña pausa entre propiedades
+                    if i % 5 == 0:
+                        await page.wait_for_timeout(200)
 
-                except Exception as e:
-                    logger.info(
-                        f"Saltando artículo {i + 1} por falta de información útil"
-                    )
-                    continue
+            except Exception as e:
+                logger.error(f"Error al procesar propiedades: {str(e)}")
+                raise
 
         except Exception as e:
             logger.error(f"Error durante el scraping: {str(e)}")
