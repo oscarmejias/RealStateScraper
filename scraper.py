@@ -39,28 +39,24 @@ class FilterManager:
         """Abre la sección de filtros si no está abierta"""
         try:
             # Simular movimiento del mouse aleatorio antes de buscar filtros
-            await self.page.mouse.move(
-                random.randint(100, 500), random.randint(100, 500)
-            )
-            await self.page.wait_for_timeout(random.randint(1000, 2000))
+
+            await self.page.wait_for_timeout(1000)
 
             # Intento 1: Por el data-test-id específico
             filter_button = self.page.locator(
-                "[data-test-id='search-components_filter-bar_advanced-filters-button']"
+                ".sc-abdb55db-0.fBcWGp.sc-d6722799-14.gCmxhq"
             )
+
             await filter_button.wait_for(state="visible")
             await filter_button.hover()
-            await self.page.wait_for_timeout(random.randint(500, 1000))
+            await self.page.wait_for_timeout(200)
             await filter_button.click()
             logger.info("Filters opened")
         except:
             logger.info("Filters not found, trying to find them in different ways")
             try:
-                # Simular movimiento del mouse aleatorio antes del segundo intento
-                await self.page.mouse.move(
-                    random.randint(100, 500), random.randint(100, 500)
-                )
-                await self.page.wait_for_timeout(random.randint(1000, 2000))
+
+                await self.page.wait_for_timeout(1000)
 
                 # Intento 2: Por el span dentro del botón
                 filter_button = self.page.locator(
@@ -68,24 +64,25 @@ class FilterManager:
                 ).first
                 await filter_button.wait_for(state="visible")
                 await filter_button.hover()
-                await self.page.wait_for_timeout(random.randint(500, 1000))
+                await self.page.wait_for_timeout(200)
                 await filter_button.click()
                 logger.info("Filters opened")
             except:
                 logger.info("Filters not found, trying to find them in different ways")
-                # Simular movimiento del mouse aleatorio antes del tercer intento
-                await self.page.mouse.move(
-                    random.randint(100, 500), random.randint(100, 500)
-                )
-                await self.page.wait_for_timeout(random.randint(1000, 2000))
 
-                # Intento 3: Por el botón que contiene el SVG y el texto
-                filter_button = self.page.locator(
-                    "button:has(svg):has-text('Filtros')"
-                ).first
+                await self.page.wait_for_timeout(1000)
+
+                filter_button = (
+                    self.page.get_by_role("button", name="Filtros")
+                    .filter(has_text="Filtros")
+                    .filter(
+                        has_attribute="data-test-id",
+                        attribute_value="search-components_filter-bar_advanced-filters-button",
+                    )
+                )
                 await filter_button.wait_for(state="visible")
                 await filter_button.hover()
-                await self.page.wait_for_timeout(random.randint(500, 1000))
+                await self.page.wait_for_timeout(200)
                 await filter_button.click()
                 logger.info("Filters opened")
 
@@ -317,14 +314,15 @@ async def run_scraper(
                 "--disable-dev-shm-usage",
                 "--disable-blink-features=AutomationControlled",  # Ocultar webdriver
                 "--disable-infobars",
-                "--window-size=920,480",
+                "--single-process",
+                "--window-size=800,600",
                 "--start-maximized",
             ],
         )
 
         # Configuración del contexto con evasión de detección
         context = await browser.new_context(
-            viewport={"width": 920, "height": 480},
+            viewport={"width": 800, "height": 600},
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
             java_script_enabled=True,
             ignore_https_errors=True,
@@ -338,10 +336,19 @@ async def run_scraper(
         )
 
         # Configurar timeouts más largos para simular comportamiento humano
-        context.set_default_timeout(60000)
-        context.set_default_navigation_timeout(60000)
+        context.set_default_timeout(30000)
+        context.set_default_navigation_timeout(30000)
 
         page = await context.new_page()
+
+        # Bloquear recursos innecesarios para ahorrar memoria
+        await page.route(
+            "**/*.{png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,otf,eot}",
+            lambda route: route.abort(),
+        )
+        await page.route(
+            "**/{analytics,tracking,advertisement,ads}.js", lambda route: route.abort()
+        )
 
         # Inyectar scripts para evadir detección
         await page.add_init_script(

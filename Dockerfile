@@ -10,9 +10,9 @@ COPY --chown=pwuser:pwuser scraper.py .
 # Instalar dependencias
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Crear directorio para screenshots
-RUN mkdir -p /home/pwuser/app/screenshots && \
-    chown -R pwuser:pwuser /home/pwuser/app/screenshots
+# # Crear directorio para screenshots
+# RUN mkdir -p /home/pwuser/app/screenshots && \
+#     chown -R pwuser:pwuser /home/pwuser/app/screenshots
 
 # Cambiar al usuario no root
 USER pwuser
@@ -25,4 +25,4 @@ ENV PYTHONUNBUFFERED=1
 ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 
 # Comando recomendado para ejecutar FastAPI con uvicorn en producción
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "4"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
