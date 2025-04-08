@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import uvicorn
 from scraper import run_scraper
+import asyncio
 
 app = FastAPI(title="Real Estate Scraper API")
 
@@ -55,3 +56,8 @@ async def scrape_properties(request: ScrapingRequest):
         return {"status": "success", "data": results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
