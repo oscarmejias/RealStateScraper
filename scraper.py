@@ -1,12 +1,10 @@
 import os
-from playwright.sync_api import sync_playwright
 from dotenv import load_dotenv
-from playwright.async_api import async_playwright, expect
+from playwright.async_api import async_playwright
 import asyncio
 from typing import Optional, List, Dict, Any
-import logging
 from datetime import datetime
-import random
+import logging
 
 # Configurar logging
 logging.basicConfig(
@@ -16,18 +14,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-#########################################################################
-###############################QUERIES###################################
-#########################################################################
-
 INITIAL_URL = "https://www.engelvoelkers.com/co/es"
-
-# Variable para la location de búsqueda
-location = "Bogota, Colombia"
-
-# Crear directorio para screenshots si no existe
-SCREENSHOT_DIR = "screenshots"
-os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 
 # Clase para manejar los filtros de propiedades
@@ -87,7 +74,7 @@ class FilterManager:
                 logger.info("Filters opened")
 
         # Esperar a que la página se estabilice después de abrir filtros
-        await self.page.wait_for_timeout(random.randint(2000, 3000))
+        await self.page.wait_for_timeout(2000)
         await self.page.wait_for_load_state("networkidle")
 
     async def apply_filters(
@@ -131,9 +118,7 @@ class FilterManager:
         # Abrir sección de filtros con comportamiento humano
         await self.open_filters()
 
-        # Simular scroll aleatorio dentro del panel de filtros
-        await self.page.mouse.wheel(0, random.randint(100, 300))
-        await self.page.wait_for_timeout(random.randint(500, 1500))
+        await self.page.wait_for_timeout(200)
 
         # Aplicar cada filtro con comportamiento humano
         for key, value in {
@@ -173,12 +158,10 @@ class FilterManager:
 
                         # Escribir el valor letra por letra
                         for char in value:
-                            await self.page.keyboard.type(
-                                char, delay=random.randint(50, 150)
-                            )
+                            await self.page.keyboard.type(char, delay=50)
                         await self.page.wait_for_timeout(200)
                         await self.page.keyboard.press("Enter")
-                        await self.page.wait_for_timeout(random.randint(500, 1000))
+                        await self.page.wait_for_timeout(200)
 
                     elif key == "property_subtype":
                         dropdown = self.page.locator(
@@ -191,12 +174,10 @@ class FilterManager:
 
                         # Escribir el valor letra por letra
                         for char in value:
-                            await self.page.keyboard.type(
-                                char, delay=random.randint(50, 150)
-                            )
+                            await self.page.keyboard.type(char, delay=50)
                         await self.page.wait_for_timeout(200)
                         await self.page.keyboard.press("Enter")
-                        await self.page.wait_for_timeout(random.randint(500, 1000))
+                        await self.page.wait_for_timeout(200)
 
                     elif key in ["price_min", "price_max"]:
                         field = self.page.locator(
@@ -259,19 +240,18 @@ class FilterManager:
                     continue
 
         # Simular comportamiento humano antes de hacer clic en "Done"
-        await self.page.mouse.move(random.randint(100, 500), random.randint(100, 500))
-        await self.page.wait_for_timeout(random.randint(1000, 2000))
+        await self.page.wait_for_timeout(1000)
 
         # Click "Done" button to apply filters
         done_button = self.page.locator(
             "[data-test-id='search-components_advanced-filters_submit-button']"
         )
         await done_button.hover()
-        await self.page.wait_for_timeout(random.randint(500, 1000))
+        await self.page.wait_for_timeout(200)
         await done_button.click()
 
         # Esperar a que los filtros se apliquen
-        await self.page.wait_for_timeout(random.randint(2000, 4000))
+        await self.page.wait_for_timeout(2000)
         await self.page.wait_for_load_state("networkidle")
 
 
@@ -369,9 +349,7 @@ async def run_scraper(
             logger.info("Starting scraper")
             await page.goto(INITIAL_URL, wait_until="domcontentloaded")
 
-            # Simular movimientos aleatorios del mouse
-            await page.mouse.move(random.randint(100, 500), random.randint(100, 500))
-            await page.wait_for_timeout(random.randint(1000, 2000))
+            await page.wait_for_timeout(1000)
 
             logger.info(f"Entered {INITIAL_URL}")
 
@@ -379,10 +357,10 @@ async def run_scraper(
             try:
                 cookie_popup = page.locator("#didomi-popup")
                 if await cookie_popup.is_visible():
-                    await page.wait_for_timeout(random.randint(1000, 2000))
+                    await page.wait_for_timeout(1000)
                     cookie_button = page.locator("#didomi-notice-agree-button")
                     await cookie_button.hover()
-                    await page.wait_for_timeout(random.randint(500, 1000))
+                    await page.wait_for_timeout(200)
                     await cookie_button.click()
                     logger.info("Cookie banner aceptado")
                     await cookie_popup.wait_for(state="hidden")
@@ -393,12 +371,12 @@ async def run_scraper(
             search_input = page.locator(".sc-7856fc0a-2.foWFcA")
             await search_input.wait_for(state="visible")
             await search_input.hover()
-            await page.wait_for_timeout(random.randint(500, 1000))
+            await page.wait_for_timeout(200)
 
             # Escribir la ubicación letra por letra
             for char in location:
-                await search_input.type(char, delay=random.randint(100, 300))
-                await page.wait_for_timeout(random.randint(50, 150))
+                await search_input.type(char, delay=50)
+                await page.wait_for_timeout(50)
 
             logger.info("Campo de búsqueda completado")
 
@@ -406,7 +384,7 @@ async def run_scraper(
             search_button = page.locator(".sc-a6c22956-0.fMdhBy.sc-7856fc0a-4.kUdQjI")
             await search_button.wait_for(state="visible")
             await search_button.hover()
-            await page.wait_for_timeout(random.randint(500, 1000))
+            await page.wait_for_timeout(200)
 
             # Hacer clic y esperar a que la navegación se complete
             async with page.expect_navigation(wait_until="domcontentloaded"):
@@ -414,20 +392,15 @@ async def run_scraper(
             logger.info("Botón de búsqueda clickeado")
 
             # Esperar a que la página se estabilice con tiempo aleatorio
-            await page.wait_for_timeout(random.randint(2000, 4000))
-            await page.wait_for_load_state("networkidle", timeout=60000)
-
-            # Simular scroll aleatorio
-            for _ in range(3):
-                await page.mouse.wheel(0, random.randint(100, 300))
-                await page.wait_for_timeout(random.randint(500, 1500))
+            await page.wait_for_timeout(2000)
+            await page.wait_for_load_state("networkidle")
 
             # Crear una instancia del FilterManager
             filter_manager = FilterManager(page)
             logger.info("filter manager instanciated")
 
             # Esperar antes de aplicar filtros
-            await page.wait_for_timeout(random.randint(2000, 4000))
+            await page.wait_for_timeout(2000)
 
             # Aplicar filtros personalizados
             await filter_manager.apply_filters(
@@ -561,8 +534,6 @@ async def run_scraper(
 
         except Exception as e:
             logger.error(f"Error durante el scraping: {str(e)}")
-            # Tomar screenshot del error
-            await page.screenshot(path=f"{SCREENSHOT_DIR}/error_{timestamp}.png")
             raise
         finally:
             await context.close()
