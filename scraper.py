@@ -316,8 +316,8 @@ async def run_scraper(
         )
 
         # Configurar timeouts más largos para simular comportamiento humano
-        context.set_default_timeout(30000)
-        context.set_default_navigation_timeout(30000)
+        context.set_default_timeout(60000)
+        context.set_default_navigation_timeout(60000)
 
         page = await context.new_page()
 
@@ -426,7 +426,7 @@ async def run_scraper(
             logger.info("filters applied")
 
             # Esperar a que la página cargue completamente
-            await page.wait_for_load_state("networkidle", timeout=30000)
+            await page.wait_for_load_state("networkidle")
 
             # Obtener numero de propiedades encontradas
             logger.info("waiting for properties to load")
