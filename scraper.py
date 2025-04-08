@@ -495,11 +495,22 @@ async def run_scraper(
                             )
 
                         # Intentar obtener la URL si existe
-                        link_element = card.locator("a").first
-                        if await link_element.is_visible():
-                            property_data["url"] = await link_element.get_attribute(
-                                "href"
-                            )
+                        # link_element = (
+                        #     card.locator(".sc-d1d212c8-15.jCbBbQ ")
+                        #     .get_by_rol("link")
+                        #     .all()
+                        # )
+
+                        # for _ in link_element:
+                        #     print(_.get_attribute("href"))
+
+                        link_element = card.locator(
+                            "//div[@class='sc-d1d212c8-15 jCbBbQ']/a"
+                        )
+
+                        for link in await link_element.element_handles():
+                            property_data["url"] = await link.get_attribute("href")
+                            logger.info(f"URL encontrada: {property_data['url']}")
 
                         # Limpiar datos
                         property_data = {
