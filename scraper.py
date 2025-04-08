@@ -293,53 +293,91 @@ async def run_scraper(
 
     async with async_playwright() as playwright:
         browser = await playwright.chromium.launch(
-            headless=True, args=["--no-sandbox", "--disable-setuid-sandbox"]
+            headless=True,
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-gpu",
+                "--disable-software-rasterizer",
+                "--disable-accelerated-2d-canvas",
+                "--no-first-run",
+                "--no-zygote",
+                "--single-process",
+                "--disable-extensions",
+                "--mute-audio",
+                "--disable-background-networking",
+                "--disable-default-apps",
+                "--disable-sync",
+                "--disable-translate",
+                "--hide-scrollbars",
+                "--metrics-recording-only",
+                "--no-default-browser-check",
+                "--no-experiments",
+                "--disable-features=site-per-process",
+                "--ignore-gpu-blocklist",
+                "--memory-pressure-off",
+                f"--js-flags=--max-old-space-size={int(512 * 0.6)}",  # 60% del RAM disponible
+            ],
         )
         context = await browser.new_context(
-            viewport={"width": 1920, "height": 1080},
+            viewport={"width": 800, "height": 600},  # Reducido para usar menos memoria
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+            java_script_enabled=True,
+            bypass_csp=True,
+            ignore_https_errors=True,
+            service_workers="block",  # Bloquear service workers para ahorrar memoria
         )
+
+        # Reducir el uso de memoria deshabilitando características
+        await context.route(
+            "**/*.{png,jpg,jpeg,gif,svg,ico,mp4,webm}", lambda route: route.abort()
+        )
+        await context.route(
+            "**/*.{woff,woff2,ttf,otf,eot}", lambda route: route.abort()
+        )
+
         page = await context.new_page()
 
         try:
             logger.info("Starting scraper")
-            await page.goto(INITIAL_URL)
+            await page.goto(
+                INITIAL_URL, wait_until="domcontentloaded"
+            )  # Cambiado de networkidle a domcontentloaded
 
             logger.info(f"Entered {INITIAL_URL}")
 
             # Botón de aceptar cookies
             try:
-                # Esperar específicamente por el popup de Didomi
                 cookie_popup = page.locator("#didomi-popup")
                 if await cookie_popup.is_visible():
                     cookie_button = page.locator("#didomi-notice-agree-button")
                     await cookie_button.wait_for(state="visible")
                     await cookie_button.click()
                     logger.info("Cookie banner aceptado")
-                    # Esperar a que el popup desaparezca completamente
                     await cookie_popup.wait_for(state="hidden")
                     await page.wait_for_load_state("networkidle")
             except Exception as e:
                 logger.info(f"No se encontró el banner de cookies: {str(e)}")
 
-            await page.wait_for_load_state("networkidle")
+            await page.wait_for_load_state("networkidle", timeout=30000)
 
             # Buscar el campo de búsqueda
             search_input = page.locator(".sc-7856fc0a-2.foWFcA")
-            await search_input.wait_for(state="visible")
+            await search_input.wait_for(state="visible", timeout=30000)
             await search_input.fill(location)
             logger.info("Campo de búsqueda completado")
             await page.wait_for_timeout(2000)
 
             # Asegurarse de que el botón de búsqueda esté visible y clickeable
             search_button = page.locator(".sc-a6c22956-0.fMdhBy.sc-7856fc0a-4.kUdQjI")
-            await search_button.wait_for(state="visible")
+            await search_button.wait_for(state="visible", timeout=30000)
             await expect(search_button).to_be_enabled()
             await search_button.click()
             logger.info("Botón de búsqueda clickeado")
 
             # Esperar a que la navegación se complete
-            await page.wait_for_load_state("networkidle")
+            await page.wait_for_load_state("networkidle", timeout=30000)
             await page.wait_for_timeout(3000)
 
             # Crear una instancia del FilterManager
@@ -370,7 +408,7 @@ async def run_scraper(
             logger.info("filters applied")
 
             # Esperar a que la página cargue completamente
-            await page.wait_for_load_state("networkidle")
+            await page.wait_for_load_state("networkidle", timeout=30000)
             await page.wait_for_timeout(2000)
 
             # Obtener numero de propiedades encontradas
@@ -385,10 +423,10 @@ async def run_scraper(
                 logger.error(f"Error al buscar artículos: {str(e)}")
 
             # Esperar a que exista al menos un artículo
-            await expect(property_cards).not_to_have_count(0)
+            await expect(property_cards).not_to_have_count(0, timeout=30000)
 
             # Esperar a que al menos una card esté visible
-            await property_cards.first.wait_for(state="visible")
+            await property_cards.first.wait_for(state="visible", timeout=30000)
 
             # Obtener el número total de cards
             count = await property_cards.count()
@@ -401,9 +439,11 @@ async def run_scraper(
                 # Verificar si el artículo tiene información útil
                 try:
                     # Esperar a que el artículo tenga contenido relevante
-                    await expect(card).not_to_have_class("sc-e5f1eba3-11 cBTUg")
+                    await expect(card).not_to_have_class(
+                        "sc-e5f1eba3-11 cBTUg", timeout=30000
+                    )
 
-                    await card.wait_for(state="visible")
+                    await card.wait_for(state="visible", timeout=30000)
                     logger.info(f"Card {i + 1}: {await card.is_visible()}")
 
                     # Verificar primero si el artículo tiene la información necesaria
