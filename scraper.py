@@ -310,7 +310,7 @@ async def run_scraper(
     async with async_playwright() as playwright:
         # Configuración optimizada del navegador con evasión de detección
         browser = await playwright.chromium.launch(
-            headless=False,  # Mantener visible para debugging
+            headless=True,  # Mantener visible para debugging
             args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
